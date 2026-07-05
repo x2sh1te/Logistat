@@ -22,7 +22,8 @@ import java.util.*
 @Composable
 fun StatsScreen(
     viewModel: StatsViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onExport: (java.io.File) -> Unit
 ) {
     val users by viewModel.allUsers.collectAsState()
     val selectedUserId by viewModel.selectedUserId.collectAsState()
@@ -30,6 +31,7 @@ fun StatsScreen(
     val startDate by viewModel.startDate.collectAsState()
     val endDate by viewModel.endDate.collectAsState()
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     val dateFormatter = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
 
     Scaffold(
@@ -42,7 +44,9 @@ fun StatsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.exportToCsv { } }) {
+                    IconButton(onClick = { 
+                        viewModel.exportToCsv(onExport, context.cacheDir) 
+                    }) {
                         Icon(Icons.Default.FileDownload, contentDescription = "Экспорт в CSV")
                     }
                 }
@@ -99,7 +103,7 @@ fun StatsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { viewModel.exportToCsv { } },
+                onClick = { viewModel.exportToCsv(onExport, context.cacheDir) },
                 modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
                 Icon(Icons.Default.FileDownload, contentDescription = null)

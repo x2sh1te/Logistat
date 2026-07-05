@@ -20,16 +20,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.myapplication.ui.navigation.Screen
+import androidx.core.content.FileProvider
 import com.example.myapplication.ui.screens.AddEditOrderScreen
 import com.example.myapplication.ui.screens.MainListScreen
 import com.example.myapplication.ui.screens.ProfileSelectionScreen
+import com.example.myapplication.ui.screens.StatsScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
-import com.example.myapplication.viewmodel.MainViewModel
-import com.example.myapplication.viewmodel.MainViewModelFactory
-import com.example.myapplication.viewmodel.OrderViewModel
-import com.example.myapplication.viewmodel.OrderViewModelFactory
-import com.example.myapplication.viewmodel.ProfileViewModel
-import com.example.myapplication.viewmodel.ProfileViewModelFactory
+import com.example.myapplication.viewmodel.*
+import java.io.File
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,6 +98,9 @@ fun AppNavigation(
                 },
                 onEditOrder = { orderId ->
                     navController.navigate(Screen.AddEditOrder.createRoute(orderId))
+                },
+                onShowStats = {
+                    navController.navigate(Screen.Stats.route)
                 }
             )
         }
@@ -120,5 +121,32 @@ fun AppNavigation(
                 onBack = { navController.popBackStack() }
             )
         }
+
+        composable(Screen.Stats.route) {
+            val statsViewModel: StatsViewModel = viewModel(
+                factory = StatsViewModelFactory(repository)
+            )
+            val context = androidx.compose.ui.platform.LocalContext.current
+
+            StatsScreen(
+                viewModel = statsViewModel,
+                onBack = { navController.popBackStack() },
+                onExport = { file -> shareFile(context, file) }
+            )
+        }
     }
+}
+
+fun shareFile(context: android.content.Context, file: File) {
+    val uri = FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        file
+    )
+    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/csv"
+        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(android.content.Intent.createChooser(intent, "Отправить отчет"))
 }

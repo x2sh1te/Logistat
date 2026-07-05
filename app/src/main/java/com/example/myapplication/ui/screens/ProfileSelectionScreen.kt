@@ -58,3 +58,46 @@ fun ProfileSelectionScreen(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun ProfileSelectionScreenPreview() {
+    com.example.myapplication.ui.theme.MyApplicationTheme {
+        ProfileSelectionScreen(
+            viewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+                factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                        return com.example.myapplication.viewmodel.ProfileViewModel(
+                            com.example.myapplication.data.Repository(
+                                object : com.example.myapplication.data.dao.UserDao {
+                                    override fun getAllUsers() = kotlinx.coroutines.flow.flowOf(
+                                        listOf(
+                                            com.example.myapplication.data.model.User(1, "Иван"),
+                                            com.example.myapplication.data.model.User(2, "Алексей")
+                                        )
+                                    )
+                                    override suspend fun insertUser(user: com.example.myapplication.data.model.User) {}
+                                    override suspend fun getUserById(id: Int): com.example.myapplication.data.model.User? = null
+                                },
+                                object : com.example.myapplication.data.dao.ClientDao {
+                                    override fun getAllClients() = kotlinx.coroutines.flow.flowOf<List<com.example.myapplication.data.model.Client>>(emptyList())
+                                    override suspend fun insertClient(client: com.example.myapplication.data.model.Client) = 0L
+                                    override suspend fun getClientByName(name: String): com.example.myapplication.data.model.Client? = null
+                                },
+                                object : com.example.myapplication.data.dao.OrderDao {
+                                    override fun getOrdersForUser(userId: Int, minDate: Long) = kotlinx.coroutines.flow.flowOf<List<com.example.myapplication.data.model.Order>>(emptyList())
+                                    override suspend fun insertOrder(order: com.example.myapplication.data.model.Order) {}
+                                    override suspend fun updateOrder(order: com.example.myapplication.data.model.Order) {}
+                                    override suspend fun deleteOrder(order: com.example.myapplication.data.model.Order) {}
+                                    override suspend fun getOrderById(id: Long): com.example.myapplication.data.model.Order? = null
+                                    override fun getOrdersForPeriod(startDate: Long, endDate: Long) = kotlinx.coroutines.flow.flowOf<List<com.example.myapplication.data.model.Order>>(emptyList())
+                                }
+                            )
+                        ) as T
+                    }
+                }
+            ),
+            onProfileSelected = {}
+        )
+    }
+}

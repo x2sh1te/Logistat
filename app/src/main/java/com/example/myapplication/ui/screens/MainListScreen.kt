@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.data.model.Order
 import com.example.myapplication.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,16 +30,21 @@ fun MainListScreen(
     userName: String,
     onAddOrder: () -> Unit,
     onChangeProfile: () -> Unit,
-    onEditOrder: (Long) -> Unit
+    onEditOrder: (Long) -> Unit,
+    onShowStats: () -> Unit
 ) {
     val orders by viewModel.filteredOrders.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Водитель: $userName") },
                 actions = {
+                    IconButton(onClick = onShowStats) {
+                        Icon(Icons.Default.BarChart, contentDescription = "Статистика")
+                    }
                     IconButton(onClick = onChangeProfile) {
                         Icon(Icons.Default.Logout, contentDescription = "Сменить профиль")
                     }
@@ -77,10 +84,48 @@ fun MainListScreen(
                     contentPadding = PaddingValues(bottom = 80.dp) // Чтобы FAB не перекрывал
                 ) {
                     items(orders, key = { it.id }) { order ->
-                        OrderCard(
-                            order = order,
-                            onClick = { onEditOrder(order.id) }
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { value ->
+                                if (value == SwipeToDismissBoxValue.EndToStart) {
+                                    scope.launch { viewModel.deleteOrder(order) }
+                                    true
+                                } else if (value == SwipeToDismissBoxValue.StartToEnd) {
+                                    onEditOrder(order.id)
+                                    false
+                                } else {
+                                    false
+                                }
+                            }
                         )
+
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = {
+                                val color = when (dismissState.dismissDirection) {
+                                    SwipeToDismissBoxValue.StartToEnd -> Color.Blue
+                                    SwipeToDismissBoxValue.EndToStart -> Color.Red
+                                    else -> Color.Transparent
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                        .background(color, MaterialTheme.shapes.medium),
+                                    contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
+                                ) {
+                                    Text(
+                                        if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) "Редактировать" else "Удалить",
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                }
+                            }
+                        ) {
+                            OrderCard(
+                                order = order,
+                                onClick = { onEditOrder(order.id) }
+                            )
+                        }
                     }
                 }
             }

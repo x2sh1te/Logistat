@@ -56,10 +56,46 @@ class StatsViewModel(private val repository: Repository) : ViewModel() {
         StatsSummary(total, cash, nonCash, paid, debt)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatsSummary())
 
-    fun exportToCsv(onFileReady: (String) -> Unit) {
+    fun exportToCsv(onFileReady: (java.io.File) -> Unit, cacheDir: java.io.File) {
         viewModelScope.launch {
-            // Здесь будет логика генерации CSV
-            // Для MVP просто заглушка, которую мы наполним в следующем шаге
+            val ordersList = _orders.first()
+            val userId = selectedUserId.value
+            val filtered = if (userId == -1) ordersList else ordersList.filter { it.userId == userId }
+            
+            val usersMap = allUsers.value.associateBy { it.id }
+            val clientsMap = repository.allClients.first().associateBy { it.id }
+            
+            val fileName = "orders_export_${System.currentTimeMillis()}.csv"
+            val file = java.io.File(cacheDir, fileName)
+            
+            try {
+                java.io.FileWriter(file).use { writer ->
+                    // Заголовок
+                    if (userId == -1) {
+                        writer.append("Водитель;Дата;Заказчик;Менеджер;Маршрут;Сумма;Тип;Статус\n")
+                    } else {
+                        writer.append("Дата;Заказчик;Менеджер;Маршрут;Сумма;Тип;Статус\n")
+                    }
+                    
+                    val sdf = java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale.getDefault())
+                    
+                    filtered.forEach { order ->
+                        if (userId == -1) {
+                            writer.append("${usersMap[order.userId]?.name ?: ""};")
+                        }
+                        writer.append("${sdf.format(java.util.Date(order.date))};")
+                        writer.append("${clientsMap[order.clientId]?.name ?: ""};")
+                        writer.append("${order.managerText};")
+                        writer.append("${order.routeText};")
+                        writer.append("${order.amount};")
+                        writer.append("${order.paymentType};")
+                        writer.append("${order.paymentStatus}\n")
+                    }
+                }
+                onFileReady(file)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 }
